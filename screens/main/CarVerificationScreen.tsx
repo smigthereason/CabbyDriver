@@ -3,199 +3,199 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
 } from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius } from "@/theme";
 import { Button } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/TextInput";
 import { Dropdown } from "@/components/ui/Dropdown";
-import { StepProgressBar } from "@/components/ui/Stepprogressbar";
+import { VEHICLE_MAKES, MODEL_MAP } from "@/constants/vehicleData";
+
 /**
  * Phase 4 — Vehicle Setup (step 3 of 3, split into 3 sub-screens)
  *
  *   CarDetailsScreen  — make, model, year, plate        (sub-step 1 of 3)
- *   CarPhotosScreen   — 2 guided vehicle photos          (sub-step 2 of 3)
- *   CarDocsScreen     — LogBook, NTSA, PSV               (sub-step 3 of 3)
+ *   CarPhotosScreen   — 2 guided vehicle photos         (sub-step 2 of 3)
+ *   CarDocsScreen     — LogBook, NTSA, PSV              (sub-step 3 of 3)
  */
 
-// ─── Step label config ─────────────────────────────────────────────────────
-const STEP_LABELS = ["Personal", "Driving", "Vehicle"];
+// ─── Shared components ─────────────────────────────────────────────────────
 
-// ─── Sub-step progress strip (separate from main StepProgressBar) ──────────
+const PencilIcon = () => (
+  <Text style={{ fontSize: 16, color: Colors.gray400 }}>✎</Text>
+);
 
-interface SubStepProps {
-  current: number;
+// ─── Sub‑step dots indicator (appears next to the subtitle) ─────────────
+
+interface DotsIndicatorProps {
+  current: number; // 1‑based
   total: number;
-  label: string;
 }
 
-const SubStepBadge: React.FC<SubStepProps> = ({ current, total, label }) => (
-  <View style={subStyles.row}>
-    <Text style={subStyles.text}>
-      Step {current} of {total} — {label}
-    </Text>
-    <View style={subStyles.dotsRow}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[subStyles.dot, i + 1 <= current && subStyles.dotFilled]}
-        />
-      ))}
-    </View>
+const DotsIndicator: React.FC<DotsIndicatorProps> = ({ current, total }) => (
+  <View style={dotStyles.row}>
+    {Array.from({ length: total }).map((_, i) => (
+      <View
+        key={i}
+        style={[dotStyles.dot, i + 1 <= current && dotStyles.dotFilled]}
+      />
+    ))}
   </View>
 );
 
-const subStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: Spacing.xl,
-  },
-  text: { ...Typography.caption, color: Colors.gray500 },
-  dotsRow: { flexDirection: "row", gap: 4 },
+const dotStyles = StyleSheet.create({
+  row: { flexDirection: "row", gap: 6, marginLeft: Spacing.sm },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: Colors.gray300,
   },
   dotFilled: { backgroundColor: Colors.black },
 });
 
-// ─── Shared PencilIcon ─────────────────────────────────────────────────────
-const PencilIcon = () => (
-  <Text style={{ fontSize: 16, color: Colors.gray400 }}>✎</Text>
+// ─── Screen wrapper (same pattern as login / sign‑up) ────────────────────
+
+type ScreenWrapperProps = {
+  children: React.ReactNode;
+  insets: any;
+};
+
+const ScreenWrapper: React.FC<ScreenWrapperProps> = ({ children, insets }) => (
+  <SafeAreaView style={sharedStyles.safe} edges={["top", "bottom"]}>
+    <KeyboardAvoidingView
+      style={sharedStyles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={insets.top}
+    >
+      <ScrollView
+        style={sharedStyles.flex}
+        contentContainerStyle={[
+          sharedStyles.scroll,
+          {
+            paddingTop: insets.top + Spacing.lg,
+            paddingBottom: insets.bottom + Spacing.xxxl,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {children}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  </SafeAreaView>
 );
 
-// ─── Vehicle make / model data ─────────────────────────────────────────────
-
-const VEHICLE_MAKES = [
-  { label: "Toyota", value: "toyota" },
-  { label: "Mazda", value: "mazda" },
-  { label: "Nissan", value: "nissan" },
-  { label: "Honda", value: "honda" },
-  { label: "Subaru", value: "subaru" },
-  { label: "Mitsubishi", value: "mitsubishi" },
-  { label: "Volkswagen", value: "volkswagen" },
-  { label: "Mercedes-Benz", value: "mercedes" },
-  { label: "BMW", value: "bmw" },
-  { label: "Other", value: "other" },
-];
+// ─── Year options (still local) ──────────────────────────────────────────
 
 const YEAR_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   const y = (2024 - i).toString();
   return { label: y, value: y };
 });
 
-const MODEL_MAP: Record<string, Array<{ label: string; value: string }>> = {
-  mazda: [
-    { label: "Demio", value: "demio" },
-    { label: "Axela", value: "axela" },
-    { label: "Atenza", value: "atenza" },
-    { label: "CX-5", value: "cx5" },
-    { label: "CX-3", value: "cx3" },
-  ],
-  toyota: [
-    { label: "Vitz", value: "vitz" },
-    { label: "Fielder", value: "fielder" },
-    { label: "Allion", value: "allion" },
-    { label: "Premio", value: "premio" },
-    { label: "Prado", value: "prado" },
-    { label: "Land Cruiser", value: "lc" },
-  ],
-};
-
-const PLACEHOLDER_MODELS = [{ label: "Select make first", value: "" }];
-
-// ─── SUB-SCREEN 1: Car Details ─────────────────────────────────────────────
+// ─── SUB‑SCREEN 1: Car Details ─────────────────────────────────────────────
 
 interface CarDetailsProps {
   navigation: any;
 }
 
 export const CarDetailsScreen: React.FC<CarDetailsProps> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
+  const [customModel, setCustomModel] = useState("");
   const [year, setYear] = useState("");
   const [plate, setPlate] = useState("");
 
-  const models = make
-    ? (MODEL_MAP[make] ?? PLACEHOLDER_MODELS)
-    : PLACEHOLDER_MODELS;
-  const isValid = make && model && year && plate.trim();
+  // Check if selected make has a predefined model list
+  const hasModels = make && MODEL_MAP[make] && MODEL_MAP[make].length > 0;
+  const modelOptions = hasModels ? MODEL_MAP[make] : [];
+
+  // Determine final model value
+  const finalModel = hasModels ? model : customModel;
+
+  const isValid = make && year && plate.trim() && finalModel.trim();
+
+  const handleMakeChange = (val: string) => {
+    setMake(val);
+    setModel(""); // reset dropdown model
+    setCustomModel(""); // reset custom model
+  };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StepProgressBar currentStep={3} totalSteps={3} labels={STEP_LABELS} />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          style={styles.flex}
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Your Vehicle</Text>
-            <Text style={styles.subtitle}>Step 1 of 3 — enter details</Text>
-          </View>
+    <ScreenWrapper insets={insets}>
+      <View style={sharedStyles.header}>
+        <Text style={sharedStyles.title}>Your Vehicle</Text>
+        <View style={sharedStyles.subtitleRow}>
+          <Text style={sharedStyles.subtitle}>Enter vehicle details</Text>
+          <DotsIndicator current={1} total={3} />
+        </View>
+      </View>
 
-          <SubStepBadge current={1} total={3} label="Details" />
+      <Dropdown
+        label="Vehicle Make"
+        options={VEHICLE_MAKES}
+        value={make}
+        placeholder="Select make…"
+        onChange={handleMakeChange}
+      />
 
-          <Dropdown
-            label="Vehicle Make"
-            options={VEHICLE_MAKES}
-            value={make}
-            placeholder="Select make…"
-            onChange={(v) => {
-              setMake(v);
-              setModel("");
-            }}
-          />
-          <Dropdown
-            label="Vehicle Model"
-            options={models}
-            value={model}
-            placeholder="Select model…"
-            onChange={setModel}
-          />
-          <Dropdown
-            label="Year of Manufacture"
-            options={YEAR_OPTIONS}
-            value={year}
-            placeholder="Select year…"
-            onChange={setYear}
-          />
-          <TextInput
-            label="Registration Plate"
-            value={plate}
-            onChangeText={setPlate}
-            placeholder="KDN 234G"
-            autoCapitalize="characters"
-            returnKeyType="done"
-            trailingIcon={<PencilIcon />}
-          />
+      {hasModels ? (
+        <Dropdown
+          label="Vehicle Model"
+          options={modelOptions}
+          value={model}
+          placeholder="Select model…"
+          onChange={setModel}
+        />
+      ) : (
+        <TextInput
+          label="Vehicle Model"
+          value={customModel}
+          onChangeText={setCustomModel}
+          placeholder="Enter model name…"
+          autoCapitalize="words"
+          returnKeyType="next"
+          trailingIcon={<PencilIcon />}
+        />
+      )}
 
-          <Button
-            label="Next — upload photos"
-            onPress={() => navigation.navigate("CarPhotos")}
-            disabled={!isValid}
-            style={{ marginTop: Spacing.xl }}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <Dropdown
+        label="Year of Manufacture"
+        options={YEAR_OPTIONS}
+        value={year}
+        placeholder="Select year…"
+        onChange={setYear}
+      />
+
+      <TextInput
+        label="Registration Plate"
+        value={plate}
+        onChangeText={setPlate}
+        placeholder="KDN 234G"
+        autoCapitalize="characters"
+        returnKeyType="done"
+        trailingIcon={<PencilIcon />}
+      />
+
+      <Button
+        label="Next — upload photos"
+        onPress={() => navigation.navigate("CarPhotos")}
+        disabled={!isValid}
+        style={{ marginTop: Spacing.xl }}
+      />
+    </ScreenWrapper>
   );
 };
 
-// ─── SUB-SCREEN 2: Vehicle Photos ─────────────────────────────────────────
+// ─── SUB‑SCREEN 2: Vehicle Photos ─────────────────────────────────────────
 
 interface CarPhotosProps {
   navigation: any;
@@ -231,61 +231,54 @@ const PhotoTile: React.FC<{
 );
 
 export const CarPhotosScreen: React.FC<CarPhotosProps> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [frontPhoto, setFrontPhoto] = useState(false);
   const [rearPhoto, setRearPhoto] = useState(false);
 
   const isValid = frontPhoto && rearPhoto;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StepProgressBar currentStep={3} totalSteps={3} labels={STEP_LABELS} />
-      <KeyboardAvoidingView style={styles.flex} behavior={undefined}>
-        <ScrollView
-          style={styles.flex}
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Vehicle Photos</Text>
-            <Text style={styles.subtitle}>
-              Step 2 of 3 — clear photos speed up approval
-            </Text>
-          </View>
+    <ScreenWrapper insets={insets}>
+      <View style={sharedStyles.header}>
+        <Text style={sharedStyles.title}>Vehicle Photos</Text>
+        <View style={sharedStyles.subtitleRow}>
+          <Text style={sharedStyles.subtitle}>
+            Clear photos speed up approval
+          </Text>
+          <DotsIndicator current={2} total={3} />
+        </View>
+      </View>
 
-          <SubStepBadge current={2} total={3} label="Photos" />
+      {/* Guideline hint */}
+      <View style={photoStyles.guideRow}>
+        <Text style={photoStyles.guideIcon}>💡</Text>
+        <Text style={photoStyles.guideText}>
+          Shoot outdoors in daylight. Full car visible, no cut‑offs.
+        </Text>
+      </View>
 
-          {/* Guideline hint */}
-          <View style={photoStyles.guideRow}>
-            <Text style={photoStyles.guideIcon}>💡</Text>
-            <Text style={photoStyles.guideText}>
-              Shoot outdoors in daylight. Full car visible, no cut-offs.
-            </Text>
-          </View>
+      <View style={photoStyles.grid}>
+        <PhotoTile
+          label="Front view"
+          subLabel="Full front of vehicle"
+          uploaded={frontPhoto}
+          onPress={() => setFrontPhoto(!frontPhoto)}
+        />
+        <PhotoTile
+          label="Rear view"
+          subLabel="Full rear of vehicle"
+          uploaded={rearPhoto}
+          onPress={() => setRearPhoto(!rearPhoto)}
+        />
+      </View>
 
-          <View style={photoStyles.grid}>
-            <PhotoTile
-              label="Front view"
-              subLabel="Full front of vehicle"
-              uploaded={frontPhoto}
-              onPress={() => setFrontPhoto(!frontPhoto)}
-            />
-            <PhotoTile
-              label="Rear view"
-              subLabel="Full rear of vehicle"
-              uploaded={rearPhoto}
-              onPress={() => setRearPhoto(!rearPhoto)}
-            />
-          </View>
-
-          <Button
-            label="Next — upload documents"
-            onPress={() => navigation.navigate("CarDocs")}
-            disabled={!isValid}
-            style={{ marginTop: Spacing.xl }}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <Button
+        label="Next — upload documents"
+        onPress={() => navigation.navigate("CarDocs")}
+        disabled={!isValid}
+        style={{ marginTop: Spacing.xl }}
+      />
+    </ScreenWrapper>
   );
 };
 
@@ -371,7 +364,7 @@ const photoStyles = StyleSheet.create({
   },
 });
 
-// ─── SUB-SCREEN 3: Vehicle Documents ──────────────────────────────────────
+// ─── SUB‑SCREEN 3: Vehicle Documents ──────────────────────────────────────
 
 interface CarDocsProps {
   navigation: any;
@@ -401,6 +394,7 @@ const DocRow: React.FC<{
 );
 
 export const CarDocsScreen: React.FC<CarDocsProps> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [logbook, setLogbook] = useState(false);
   const [ntsa, setNtsa] = useState(false);
   const [psv, setPsv] = useState(false);
@@ -408,66 +402,58 @@ export const CarDocsScreen: React.FC<CarDocsProps> = ({ navigation }) => {
   const isValid = logbook && ntsa && psv;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StepProgressBar currentStep={3} totalSteps={3} labels={STEP_LABELS} />
-      <KeyboardAvoidingView style={styles.flex} behavior={undefined}>
-        <ScrollView
-          style={styles.flex}
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Vehicle Documents</Text>
-            <Text style={styles.subtitle}>
-              Step 3 of 3 — upload scans in clear photos
-            </Text>
-          </View>
+    <ScreenWrapper insets={insets}>
+      <View style={sharedStyles.header}>
+        <Text style={sharedStyles.title}>Vehicle Documents</Text>
+        <View style={sharedStyles.subtitleRow}>
+          <Text style={sharedStyles.subtitle}>
+            Upload scans as clear photos
+          </Text>
+          <DotsIndicator current={3} total={3} />
+        </View>
+      </View>
 
-          <SubStepBadge current={3} total={3} label="Documents" />
+      <View style={docStyles.stack}>
+        <DocRow
+          icon="📋"
+          label="LogBook"
+          subLabel="Vehicle registration document"
+          uploaded={logbook}
+          onPress={() => setLogbook(!logbook)}
+        />
+        <DocRow
+          icon="🔖"
+          label="NTSA Inspection"
+          subLabel="Inspection report file"
+          uploaded={ntsa}
+          onPress={() => setNtsa(!ntsa)}
+        />
+        <DocRow
+          icon="🛡️"
+          label="PSV Insurance"
+          subLabel="Valid policy document"
+          uploaded={psv}
+          onPress={() => setPsv(!psv)}
+        />
+      </View>
 
-          <View style={docStyles.stack}>
-            <DocRow
-              icon="📋"
-              label="LogBook"
-              subLabel="Vehicle registration document"
-              uploaded={logbook}
-              onPress={() => setLogbook(!logbook)}
-            />
-            <DocRow
-              icon="🔖"
-              label="NTSA Inspection"
-              subLabel="Inspection report file"
-              uploaded={ntsa}
-              onPress={() => setNtsa(!ntsa)}
-            />
-            <DocRow
-              icon="🛡️"
-              label="PSV Insurance"
-              subLabel="Valid policy document"
-              uploaded={psv}
-              onPress={() => setPsv(!psv)}
-            />
-          </View>
+      <Button
+        label="Finish sign-up"
+        onPress={() => navigation.navigate("Subscription")}
+        disabled={!isValid}
+        style={{ marginTop: Spacing.xxl }}
+      />
 
-          <Button
-            label="Finish sign-up"
-            onPress={() => navigation.navigate("Subscription")}
-            disabled={!isValid}
-            style={{ marginTop: Spacing.xxl }}
-          />
-
-          {/* Hint */}
-          <View style={styles.hintRow}>
-            <View style={styles.hintIcon}>
-              <Text style={styles.hintIconText}>!</Text>
-            </View>
-            <Text style={styles.hintText}>
-              Clear photos lead to faster approvals.
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      {/* Hint */}
+      <View style={sharedStyles.hintRow}>
+        <View style={sharedStyles.hintIcon}>
+          <Text style={sharedStyles.hintIconText}>!</Text>
+        </View>
+        <Text style={sharedStyles.hintText}>
+          Clear photos lead to faster approvals.
+        </Text>
+      </View>
+    </ScreenWrapper>
   );
 };
 
@@ -506,18 +492,21 @@ const docStyles = StyleSheet.create({
 
 // ─── Shared styles ─────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const sharedStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.offWhite },
   flex: { flex: 1 },
   scroll: {
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
-    flexGrow: 1,
+    // paddingTop & paddingBottom are set dynamically via insets
   },
-  header: { marginBottom: Spacing.md },
+  header: { marginBottom: Spacing.xxl },
   title: { ...Typography.displayLarge, marginBottom: Spacing.xs },
-  subtitle: { ...Typography.bodyMedium, color: Colors.gray500 },
+  subtitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  subtitle: { ...Typography.bodyMedium, color: Colors.gray500, flex: 1 },
   hintRow: {
     flexDirection: "row",
     alignItems: "center",

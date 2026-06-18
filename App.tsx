@@ -10,6 +10,7 @@ import { LoginScreen, OTPVerificationScreen } from "@/screens/auth/LoginScreen";
 import {
   SignUpAccountScreen,
   SignUpVerificationScreen,
+  SignUpLocationScreen,
   SignUpCredentialsScreen,
   SignUpEmergencyScreen,
 } from "@/screens/auth/SignUpScreens";
@@ -55,6 +56,7 @@ export default function App() {
           name="SignUpCredentials"
           component={SignUpCredentialsScreen}
         />
+        <Stack.Screen name="SignUpLocation" component={SignUpLocationScreen} />
         <Stack.Screen
           name="SignUpEmergency"
           component={SignUpEmergencyScreen}
